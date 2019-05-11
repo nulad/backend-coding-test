@@ -1,13 +1,8 @@
 'use strict';
 
-const express = require('express');
-const app = express();
-const port = 8010;
-
-const bodyParser = require('body-parser');
-const jsonParser = bodyParser.json();
-
 const sqlite3 = require('sqlite3').verbose();
+
+const port = 8010;
 const db = new sqlite3.Database(':memory:');
 
 const buildSchemas = require('./src/schemas');
