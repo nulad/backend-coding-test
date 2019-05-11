@@ -7,8 +7,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "mocha tests",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "npm run unit-test && npm run check-coverage",
+    "unit-test": "nyc --reporter=html --reporter=text mocha tests",
+    "check-coverage": "nyc check-coverage"
   },
   "keywords": [
     "Xendit"
@@ -28,6 +30,20 @@
     "eslint-plugin-jsx-a11y": "^6.2.1",
     "eslint-plugin-react": "^7.13.0",
     "mocha": "^6.1.4",
+    "nyc": "^14.1.1",
     "supertest": "^4.0.2"
+  },
+  "nyc": {
+    "per-file": false,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80,
+    "reporter": [
+      "lcov"
+    ],
+    "exclude": [
+      "**/tests/**"
+    ]
   }
 }
