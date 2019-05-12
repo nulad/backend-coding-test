@@ -19,13 +19,11 @@ const Logger = createLogger({
     ]
 });
 
-if (process.env.NODE_ENV !== 'production') {
-    Logger.add(new transports.Console({
-        format: format.combine(
-            format.colorize(),
-            format.simple()
-        )
-    }));
-}
+Logger.add(new transports.Console({
+    format: format.combine(
+        format.colorize(),
+        format.simple()
+    )
+}));
 
 module.exports = Logger;
