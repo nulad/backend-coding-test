@@ -3,6 +3,7 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const bodyParser = require('body-parser');
+const Joi = require('joi');
 const swaggerDoc = require('../swagger.json');
 
 const app = express();
@@ -97,14 +98,38 @@ module.exports = (db) => {
         return result;
     });
 
-    app.get('/rides', (req, res) => {
+    app.get('/rides', async (req, res) => {
+        const ridesSchema = Joi.object().keys({
+            page: Joi.number().positive().optional().default(1),
+            limit: Joi.number().positive().optional().default(10)
+        });
+
+        const input = Joi.validate(req.query, ridesSchema);
+        if (input.error) {
+            return res.send({
+                error_code: 'SERVER_ERROR',
+                message: input.error.message
+            });
+        }
+        const {
+            page,
+            limit
+        } = input.value;
+        const offset = (page - 1) * limit;
+
+        const params = [
+            offset,
+            limit
+        ];
+
         db.all(
-            'SELECT * FROM Rides',
+            'SELECT * FROM Rides LIMIT ?, ?',
+            params,
             (err, rows) => {
                 if (err) {
                     return res.send({
                         error_code: 'SERVER_ERROR',
-                        message: 'Unknown error'
+                        message: err.message
                     });
                 }
 
@@ -115,9 +140,31 @@ module.exports = (db) => {
                     });
                 }
 
-                return res.send(rows);
+                db.all(
+                    'SELECT count(*) AS count FROM Rides',
+                    (err2, result) => {
+                        if (err2) {
+                            return res.send({
+                                error_code: 'SERVER_ERROR',
+                                message: err2.message
+                            });
+                        }
+
+                        return res.send({
+                            data: rows,
+                            meta: {
+                                page,
+                                limit,
+                                total_data: result[0].count,
+                                total_page: Math.ceil(result[0].count / limit)
+                            }
+                        });
+                    }
+                );
+                return true;
             }
         );
+        return true;
     });
 
     app.get('/rides/:id', (req, res) => {
