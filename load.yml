@@ -1,0 +1,30 @@
+config:
+  target: 'http://localhost:8010'
+  phases:
+    - duration: 30
+      arrivalRate: 105
+scenarios:
+  - flow:
+    - get:
+        url: "/health"
+    weight: 1
+  - flow:
+    - post:
+        url: "/rides"
+        json:
+          start_lat: 0
+          start_long: 0
+          end_lat: 0
+          end_long: 1
+          rider_name: 'joko'
+          driver_name: 'andi'
+          driver_vehicle: 'avanza'
+    weight: 5
+  - flow:
+    - get:
+        url: "/rides"
+    weight: 2
+  - flow:
+    - get:
+        url: "/rides/{{$randomNumber(1,100)}}"
+    weight: 2
