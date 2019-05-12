@@ -20,7 +20,8 @@ exports.insert = (db, params) => {
 exports.get = (db, id) => {
     const result = new Promise((resolve, reject) => {
         db.all(
-            `SELECT * FROM Rides WHERE rideID=${id}`,
+            'SELECT * FROM Rides WHERE rideID=?',
+            [id],
             (err, rows) => {
                 if (err) {
                     reject(err);
