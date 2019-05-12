@@ -95,26 +95,31 @@ module.exports = (db) => {
     });
 
     app.get('/rides', async (req, res) => {
+        let response;
+        let isError = false;
         const ridesSchema = Joi.object().keys({
             page: Joi.number().positive().optional().default(1),
             limit: Joi.number().positive().optional().default(10)
         });
 
-        const input = Joi.validate(req.query, ridesSchema);
-        if (input.error) {
-            return res.send({
-                error_code: 'SERVER_ERROR',
-                message: input.error.message
+        const input = await Joi.validate(req.query, ridesSchema)
+            .catch((err) => {
+                response = {
+                    error_code: 'VALIDATION_ERROR',
+                    message: err.message
+                };
+                isError = true;
             });
+
+        if (isError) {
+            return res.send(response);
         }
         const {
             page,
             limit
-        } = input.value;
+        } = input;
         const offset = (page - 1) * limit;
 
-        let response;
-        let isError = false;
         const data = await repo.getAll(db, offset, limit)
             .catch((err) => {
                 response = {
@@ -157,7 +162,24 @@ module.exports = (db) => {
     app.get('/rides/:id', async (req, res) => {
         let response;
         let isError = false;
-        const rows = await repo.get(db, req.params.id)
+        const rideSchema = Joi.object().keys({
+            id: Joi.number().positive().required()
+        });
+
+        const input = await Joi.validate(req.params, rideSchema)
+            .catch((err) => {
+                response = {
+                    error_code: 'VALIDATION_ERROR',
+                    message: err.message
+                };
+                isError = true;
+            });
+
+        if (isError) {
+            return res.send(response);
+        }
+
+        const rows = await repo.get(db, input.id)
             .catch((err) => {
                 response = {
                     error_code: 'SERVER_ERROR',
