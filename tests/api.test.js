@@ -3,14 +3,17 @@
 'use strict';
 
 const request = require('supertest');
+const sinon = require('sinon');
 const sqlite3 = require('sqlite3').verbose();
 
 const db = new sqlite3.Database(':memory:');
 const app = require('../src/app')(db);
+const repo = require('../src/repo');
 const buildSchemas = require('../src/schemas');
 const Logger = require('../utils/logger');
 
 describe('API tests', () => {
+    let sandbox;
     before((done) => {
         db.serialize((err) => {
             if (err) {
@@ -21,6 +24,16 @@ describe('API tests', () => {
 
             return done();
         });
+    });
+
+    beforeEach((done) => {
+        sandbox = sinon.createSandbox();
+        return done();
+    })
+
+    afterEach((done) => {
+        sandbox.restore();
+        return done();
     });
 
     describe('GET /health', () => {
@@ -86,8 +99,8 @@ describe('API tests', () => {
         });
     });
 
-    describe('POST /rides Start Lat/Long validation error', () => {
-        it('should not create a new ride', (done) => {
+    describe('POST /rides validation error', () => {
+        it('should not create a new ride with incorrect Start Lat/Long ', (done) => {
             request(app)
                 .post('/rides')
                 .send({
@@ -115,10 +128,35 @@ describe('API tests', () => {
                 })
                 .expect(200, done);
         });
-    });
-
-    describe('POST /rides End Lat/Long validation error', () => {
-        it('should not create a new ride', (done) => {
+        it('should not create a new ride with incorrect End Lat/Long ', (done) => {
+            request(app)
+                .post('/rides')
+                .send({
+                    start_lat: 0,
+                    start_long: 0,
+                    end_lat: 0,
+                    end_long: 1,
+                    rider_name: 'joko',
+                    driver_name: 'andi',
+                    driver_vehicle: ''
+                })
+                .expect('Content-Type', /json/)
+                .expect((res) => {
+                    const expected = {
+                        error_code: 'VALIDATION_ERROR',
+                        message: 'Driver vehicle must be a non empty string'
+                    };
+                    Object.keys(expected).forEach((element) => {
+                        if (expected[element] !== res.body[element]) {
+                            Logger.error(`incorrect assertion ${element}: ${expected[element]} - ${res.body[element]}`);
+                            throw new Error();
+                        }
+                    });
+                    return true;
+                })
+                .expect(200, done);
+        });
+        it('should not create a new ride with incorrect Rider name', (done) => {
             request(app)
                 .post('/rides')
                 .send({
@@ -146,10 +184,7 @@ describe('API tests', () => {
                 })
                 .expect(200, done);
         });
-    });
-
-    describe('POST /rides rider name validation error', () => {
-        it('should not create a new ride', (done) => {
+        it('should not create a new ride with incorrect Driver name', (done) => {
             request(app)
                 .post('/rides')
                 .send({
@@ -177,10 +212,7 @@ describe('API tests', () => {
                 })
                 .expect(200, done);
         });
-    });
-
-    describe('POST /rides driver name validation error', () => {
-        it('should not create a new ride', (done) => {
+        it('should not create a new ride with incorrect Driver vehicle', (done) => {
             request(app)
                 .post('/rides')
                 .send({
@@ -210,8 +242,9 @@ describe('API tests', () => {
         });
     });
 
-    describe('POST /rides driver vehicle validation error', () => {
-        it('should not create a new ride', (done) => {
+    describe('POST /rides error', () => {
+        it('should not create a new ride when there is error on insert', (done) => {
+            sandbox.stub(repo, 'insert').rejects(new Error('test'));
             request(app)
                 .post('/rides')
                 .send({
@@ -221,17 +254,17 @@ describe('API tests', () => {
                     end_long: 1,
                     rider_name: 'joko',
                     driver_name: 'andi',
-                    driver_vehicle: ''
+                    driver_vehicle: 'avanza'
                 })
                 .expect('Content-Type', /json/)
                 .expect((res) => {
                     const expected = {
-                        error_code: 'VALIDATION_ERROR',
-                        message: 'Driver vehicle must be a non empty string'
+                        error_code: 'SERVER_ERROR',
+                        message: 'Unknown Error'
                     };
                     Object.keys(expected).forEach((element) => {
                         if (expected[element] !== res.body[element]) {
-                            Logger.error(`incorrect assertion ${element}: ${expected[element]} - ${res.body[element]}`);
+                            Logger.error(`incorrect assertion ${element}: ${expected[element]} - ${res.body[0][element]}`);
                             throw new Error();
                         }
                     });
@@ -275,6 +308,60 @@ describe('API tests', () => {
                     return true;
                 })
                 .expect(200, done);
+        });
+    });
+
+    describe('GET /rides error', () => {
+        it('should not get all rides when there is error on getAll', (done) => {
+            sandbox.stub(repo, 'getAll').rejects(new Error('test'));
+            request(app)
+                .get('/rides')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .expect((res) => {
+                    const expected = {
+                        error_code: 'SERVER_ERROR',
+                        message: 'Unknown Error'
+                    };
+                    Object.keys(expected).forEach((element) => {
+                        if (expected[element] !== res.body[element]) {
+                            Logger.error(`incorrect assertion ${element}: ${expected[element]} - ${res.body[element]}`);
+                            throw new Error();
+                        }
+                    });
+                    return true;
+                })
+                .end((err, res) => {
+                    if (err) return done(err);
+                    return done();
+                });
+        });
+    });
+
+    describe('GET /rides/:id error', () => {
+        it('should not get rides when there is error on get', (done) => {
+            sandbox.stub(repo, 'get').rejects(new Error('test'));
+            request(app)
+                .get('/rides/1')
+                .expect('Content-Type', /json/)
+                .expect(200)
+                .expect((res) => {
+                    const expected = {
+                        error_code: 'SERVER_ERROR',
+                        message: 'Unknown Error'
+                    };
+                    Object.keys(expected).forEach((element) => {
+                        if (expected[element] !== res.body[element]) {
+                            Logger.error(`incorrect assertion ${element}: ${expected[element]} - ${res.body[element]}`);
+                            throw new Error();
+                        }
+                    });
+                    return true;
+                })
+                .end((err, res) => {
+                    if (err) return done(err);
+                    return done();
+                });
         });
     });
 
