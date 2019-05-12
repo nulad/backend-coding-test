@@ -286,22 +286,32 @@ describe('API tests', () => {
                 .expect(200)
                 .expect((res) => {
                     const expected = {
-                        rideID: 1,
-                        startLat: 0,
-                        startLong: 0,
-                        endLat: 0,
-                        endLong: 1,
-                        riderName: 'joko',
-                        driverName: 'andi',
-                        driverVehicle: 'avanza'
+                        data: [
+                            {
+                                rideID: 1,
+                                startLat: 0,
+                                startLong: 0,
+                                endLat: 0,
+                                endLong: 1,
+                                riderName: 'joko',
+                                driverName: 'andi',
+                                driverVehicle: 'avanza'
+                            }
+                        ],
+                        meta: {
+                            page: 1,
+                            limit: 10,
+                            total_data: 1,
+                            total_page: 1
+                        }
                     };
-                    if (res.body.length !== 1) {
+                    if (res.body.data.length !== 1) {
                         const message = `incorrect assertion response length: ${1} - ${res.body.length}`;
                         Logger.error(message);
                         throw new Error(message);
                     }
                     Object.keys(expected).forEach((element) => {
-                        if (expected[element] !== res.body[0][element]) {
+                        if (expected.data[0][element] !== res.body.data[0][element]) {
                             const message = `incorrect assertion ${element}: ${expected[element]} - ${res.body[0][element]}`;
                             Logger.error(message);
                             throw new Error(message);
